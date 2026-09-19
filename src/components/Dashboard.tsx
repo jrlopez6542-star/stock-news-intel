@@ -5,6 +5,7 @@ import type { AnalyzeResponse } from "@/lib/types";
 import { NewsList } from "./NewsList";
 import { PricePanel } from "./PricePanel";
 import { RecommendationPanel } from "./RecommendationPanel";
+import { ProviderStatus } from "./ProviderStatus";
 import { TickerSearch } from "./TickerSearch";
 
 export function Dashboard() {
@@ -51,6 +52,7 @@ export function Dashboard() {
           reducir / retirar.
         </p>
         <TickerSearch initial={ticker} onSearch={load} loading={loading} />
+        <ProviderStatus />
       </header>
 
       {error && (

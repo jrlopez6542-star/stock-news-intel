@@ -6,6 +6,7 @@ import type {
   PriceDirection,
   NewsScope,
 } from "../types";
+import { getOpenAIModel } from "../openai-config";
 import { scoreNewsHeuristic } from "./heuristic";
 
 interface LlmScoreRow {
@@ -58,7 +59,7 @@ export async function scoreNewsWithOpenAI(
   try {
     const client = new OpenAI({ apiKey });
     const completion = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      model: getOpenAIModel(),
       temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [

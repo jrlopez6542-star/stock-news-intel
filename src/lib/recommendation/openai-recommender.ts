@@ -6,6 +6,7 @@ import type {
   RecommendationAction,
   ScoredNewsItem,
 } from "../types";
+import { getOpenAIModel } from "../openai-config";
 import { recommendHeuristic } from "./heuristic";
 
 const ACTIONS: RecommendationAction[] = [
@@ -48,7 +49,7 @@ export async function recommendWithOpenAI(
     };
 
     const completion = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      model: getOpenAIModel(),
       temperature: 0.3,
       response_format: { type: "json_object" },
       messages: [

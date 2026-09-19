@@ -4,6 +4,7 @@ import type {
   Recommendation,
   ScoredNewsItem,
 } from "../types";
+import { hasOpenAIKey } from "../openai-config";
 import { recommendHeuristic } from "./heuristic";
 import { recommendWithOpenAI } from "./openai-recommender";
 
@@ -19,8 +20,8 @@ export async function buildRecommendation(
   price: PriceAnalysis,
   profile: CompanyProfile
 ): Promise<RecommendResult> {
-  const key = process.env.OPENAI_API_KEY?.trim();
-  if (key) {
+  if (hasOpenAIKey()) {
+    const key = process.env.OPENAI_API_KEY!.trim();
     const recommendation = await recommendWithOpenAI(
       news,
       price,

@@ -13,8 +13,10 @@ interface BenzingaNewsRow {
 }
 
 /**
- * Cliente ligero de Benzinga News API.
- * Requiere BENZINGA_API_KEY. Si falla, el caller debe hacer fallback a mock.
+ * Cliente ligero de Benzinga News API (compatible con Basic free).
+ * Usa displayOutput=headline → title + teaser (sin body completo).
+ * Premium / planes cotizados dan abstract/full; aquí no hace falta.
+ * Requiere BENZINGA_API_KEY. Si falla, el caller hace fallback a mock.
  */
 export async function fetchBenzingaNews(
   ticker: string,
@@ -25,6 +27,7 @@ export async function fetchBenzingaNews(
   url.searchParams.set("token", apiKey);
   url.searchParams.set("tickers", symbol);
   url.searchParams.set("pageSize", "20");
+  // Basic free: headline (+ teaser). Evita pedir body/full.
   url.searchParams.set("displayOutput", "headline");
 
   const res = await fetch(url.toString(), {
