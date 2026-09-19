@@ -17,7 +17,7 @@ const COLUMNS: {
   {
     key: "comprar",
     title: "Comprar",
-    subtitle: "Señal invertir",
+    subtitle: "Comprar / aumentar",
     match: (c) => c.boardColumn === "comprar",
     tone: "border-emerald-500/35 bg-emerald-500/[0.06]",
     header: "text-emerald-300",
@@ -25,7 +25,7 @@ const COLUMNS: {
   {
     key: "vender",
     title: "Vender",
-    subtitle: "Retirar o reducir",
+    subtitle: "Salir o reducir",
     match: (c) => c.boardColumn === "vender" || c.boardColumn === "reducir",
     tone: "border-rose-500/35 bg-rose-500/[0.06]",
     header: "text-rose-300",
@@ -45,11 +45,14 @@ function mapAction(action: RecommendationAction | string): {
   boardLabel: string;
   sourceAction: RecommendationAction;
 } {
-  if (action === "invertir") {
-    return { boardColumn: "comprar", boardLabel: "Comprar", sourceAction: "invertir" };
+  if (action === "comprar" || action === "invertir") {
+    return { boardColumn: "comprar", boardLabel: "Comprar", sourceAction: action as RecommendationAction };
   }
-  if (action === "retirar") {
-    return { boardColumn: "vender", boardLabel: "Vender", sourceAction: "retirar" };
+  if (action === "aumentar") {
+    return { boardColumn: "comprar", boardLabel: "Aumentar", sourceAction: "aumentar" };
+  }
+  if (action === "salir" || action === "retirar") {
+    return { boardColumn: "vender", boardLabel: action === "salir" ? "Salir" : "Vender", sourceAction: action as RecommendationAction };
   }
   if (action === "reducir") {
     return { boardColumn: "reducir", boardLabel: "Reducir", sourceAction: "reducir" };

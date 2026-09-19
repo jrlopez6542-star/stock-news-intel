@@ -1,5 +1,6 @@
 import type {
   CompanyProfile,
+  PositionContext,
   PriceAnalysis,
   Recommendation,
   ScoredNewsItem,
@@ -18,7 +19,8 @@ export interface RecommendResult {
 export async function buildRecommendation(
   news: ScoredNewsItem[],
   price: PriceAnalysis,
-  profile: CompanyProfile
+  profile: CompanyProfile,
+  position?: PositionContext
 ): Promise<RecommendResult> {
   if (hasOpenAIKey()) {
     const key = process.env.OPENAI_API_KEY!.trim();
@@ -26,12 +28,13 @@ export async function buildRecommendation(
       news,
       price,
       profile,
-      key
+      key,
+      position
     );
     return { recommendation, recommender: "openai" };
   }
   return {
-    recommendation: recommendHeuristic(news, price),
+    recommendation: recommendHeuristic(news, price, position),
     recommender: "heuristic",
   };
 }

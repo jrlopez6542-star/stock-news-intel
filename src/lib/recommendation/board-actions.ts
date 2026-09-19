@@ -13,12 +13,19 @@ export interface BoardActionView {
 
 /**
  * Mapear acciones internas → columnas del desk:
- * invertir→comprar, retirar→vender, reducir→reducir, mantener→mantener.
+ * comprar/aumentar/invertir→comprar, salir/retirar→vender,
+ * reducir→reducir, mantener→mantener.
  */
 export function toBoardAction(action: RecommendationAction): BoardActionView {
   switch (action) {
+    case "comprar":
+      return { column: "comprar", label: "Comprar", sourceAction: action };
+    case "aumentar":
+      return { column: "comprar", label: "Aumentar", sourceAction: action };
     case "invertir":
       return { column: "comprar", label: "Comprar", sourceAction: action };
+    case "salir":
+      return { column: "vender", label: "Salir", sourceAction: action };
     case "retirar":
       return { column: "vender", label: "Vender", sourceAction: action };
     case "reducir":

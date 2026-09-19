@@ -1,6 +1,6 @@
 # Stock News Intel (es-CO)
 
-Dashboard tipo trading desk: **tablero Comprar / Vender**, precio (Yahoo Finance), rachas 7/30, **noticias en español** (preferencia ES + traducción OpenAI) con score 1–10 y recomendación (invertir → comprar · retirar/reducir → vender · mantener).
+Dashboard tipo trading desk: **tablero Comprar / Vender**, **posición + horizonte** (localStorage), **niveles** (entrada / stop / objetivo / invalidación), **catalizadores**, precio (Yahoo Finance), rachas 7/30, **noticias en español** con score 1–10 y recomendación (comprar · aumentar · mantener · reducir · salir).
 
 ## Cómo correr
 
@@ -78,4 +78,4 @@ APIs: `GET /api/analyze?ticker=AAPL` · `GET /api/board` · `GET /api/health`
 
 ## Nota
 
-Señales educativas — no constituyen asesoría financiera.
+Señales educativas — no constituyen asesoría financiera ni oferta de inversión.

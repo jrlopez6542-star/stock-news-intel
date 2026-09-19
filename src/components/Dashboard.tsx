@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { AnalyzeResponse } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { loadPosition } from "@/lib/position-storage";
+import type { AnalyzeResponse, PositionContext } from "@/lib/types";
+import { CatalystsPanel } from "./CatalystsPanel";
 import { NewsList } from "./NewsList";
+import { PositionContextPanel } from "./PositionContextPanel";
 import { PricePanel } from "./PricePanel";
 import { RecommendationPanel } from "./RecommendationPanel";
 import { RecommendationsBoard } from "./RecommendationsBoard";
@@ -45,13 +48,20 @@ export function Dashboard() {
   const [data, setData] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const positionRef = useRef<PositionContext>({});
 
-  const load = useCallback(async (t: string) => {
+  const load = useCallback(async (t: string, position?: PositionContext) => {
     setTicker(t);
     setLoading(true);
     setError(null);
+    const pos = position ?? loadPosition(t);
+    positionRef.current = pos;
     try {
-      const res = await fetch(`/api/analyze?ticker=${encodeURIComponent(t)}`);
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: t, position: pos }),
+      });
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.details || json.error || "Error al analizar");
@@ -68,6 +78,17 @@ export function Dashboard() {
   useEffect(() => {
     void load("AAPL");
   }, [load]);
+
+  const onPositionChange = useCallback(
+    (ctx: PositionContext) => {
+      positionRef.current = ctx;
+    },
+    []
+  );
+
+  const reanalyzeWithPosition = useCallback(() => {
+    void load(ticker, positionRef.current);
+  }, [load, ticker]);
 
   const priceDemo = data?.meta.priceSource === "demo";
   const newsDemo = data?.meta.newsProvider === "demo";
@@ -88,10 +109,10 @@ export function Dashboard() {
               Inteligencia de noticias bursátiles
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400 sm:text-base">
-              Escritorio de análisis: tablero Comprar / Vender, precio en vivo,
-              rachas 7/30, titulares en español con score de impacto y
-              recomendación (invertir → comprar · retirar/reducir → vender ·
-              mantener).
+              Escritorio de análisis: tablero Comprar / Vender, posición y
+              horizonte, niveles (entrada / stop / objetivo), catalizadores,
+              noticias en español con score y recomendación educativa
+              (comprar · aumentar · mantener · reducir · salir).
             </p>
           </div>
           <TickerSearch initial={ticker} onSearch={load} loading={loading} />
@@ -151,6 +172,11 @@ export function Dashboard() {
             <span className="rounded-full border border-slate-700 px-2.5 py-1 text-slate-300">
               Reco: {data.meta.recommender}
             </span>
+            {data.meta.positionAware && (
+              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+                Con posición
+              </span>
+            )}
             {loading && (
               <span className="inline-flex items-center gap-1.5 text-emerald-400">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
@@ -167,6 +193,20 @@ export function Dashboard() {
                 price={data.price}
                 companyName={data.company.name}
               />
+              <PositionContextPanel
+                ticker={data.ticker}
+                onChange={onPositionChange}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={reanalyzeWithPosition}
+                  disabled={loading}
+                  className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+                >
+                  Recalcular recomendación con posición
+                </button>
+              </div>
               <section>
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                   <div>
@@ -187,6 +227,10 @@ export function Dashboard() {
             </div>
             <div className="space-y-6 lg:col-span-2">
               <RecommendationPanel recommendation={data.recommendation} />
+              <CatalystsPanel
+                catalysts={data.catalysts ?? []}
+                ticker={data.ticker}
+              />
               <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Contexto de empresa
@@ -235,6 +279,11 @@ export function Dashboard() {
           Ingresa un ticker para comenzar el análisis.
         </div>
       )}
+
+      <footer className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-4 py-3 text-center text-[11px] text-slate-500">
+        Contenido educativo. No constituye asesoría financiera, recomendación de
+        inversión ni oferta de valores.
+      </footer>
     </div>
   );
 }
