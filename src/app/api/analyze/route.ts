@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
       recommendation,
       meta: {
         newsProvider: newsResult.provider,
+        priceSource: price.snapshot.source,
         scorer,
         recommender,
         generatedAt: new Date().toISOString(),

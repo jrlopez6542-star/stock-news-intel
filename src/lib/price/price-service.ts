@@ -6,11 +6,41 @@ import type {
   StreakResult,
 } from "../types";
 
-// Evita spam de avisos en logs del servidor
 try {
   yahooFinance.suppressNotices(["yahooSurvey", "ripHistorical"]);
 } catch {
   /* ignore en versiones sin suppressNotices */
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function isRateLimitError(err: unknown): boolean {
+  const msg = String(err instanceof Error ? err.message : err);
+  return /429|Too Many Requests|rate.?limit/i.test(msg);
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 4,
+  baseMs = 700
+): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      last = err;
+      if (i === attempts - 1) break;
+      const backoff =
+        baseMs * Math.pow(2, i) + Math.floor(Math.random() * 300);
+      // Rate limits: wait longer; other errors: still retry briefly
+      const wait = isRateLimitError(err) ? backoff : Math.min(backoff, 1200);
+      await sleep(wait);
+    }
+  }
+  throw last;
 }
 
 /** Calcula la racha alcista/bajista al final de la serie de cierres. */
@@ -98,12 +128,94 @@ function demoPriceAnalysis(ticker: string): PriceAnalysis {
   };
 }
 
-async function fetchDailyBars(symbol: string): Promise<DailyBar[]> {
+interface YahooChartResponse {
+  chart?: {
+    result?: Array<{
+      meta?: {
+        currency?: string;
+        regularMarketPrice?: number;
+        chartPreviousClose?: number;
+        previousClose?: number;
+      };
+      timestamp?: number[];
+      indicators?: {
+        quote?: Array<{ close?: Array<number | null> }>;
+      };
+    }>;
+    error?: { description?: string } | null;
+  };
+}
+
+const YAHOO_UA =
+  "Mozilla/5.0 (compatible; StockNewsIntel/1.0; +https://stock-news-intel.vercel.app)";
+
+/** Direct Yahoo chart REST — often more reliable than the SDK under 429. */
+async function fetchBarsViaChartApi(symbol: string): Promise<{
+  history: DailyBar[];
+  currency: string;
+  livePrice: number | null;
+}> {
+  const hosts = [
+    "https://query1.finance.yahoo.com",
+    "https://query2.finance.yahoo.com",
+  ];
+  let lastErr: unknown;
+
+  for (const host of hosts) {
+    try {
+      const url = `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=3mo`;
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": YAHOO_UA,
+        },
+        cache: "no-store",
+      });
+      if (res.status === 429) {
+        throw new Error("Too Many Requests");
+      }
+      if (!res.ok) {
+        throw new Error(`Yahoo chart HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as YahooChartResponse;
+      const result = data.chart?.result?.[0];
+      if (!result?.timestamp?.length) {
+        throw new Error("Yahoo chart: sin datos");
+      }
+      const closes = result.indicators?.quote?.[0]?.close ?? [];
+      const history: DailyBar[] = [];
+      for (let i = 0; i < result.timestamp.length; i++) {
+        const c = closes[i];
+        if (c == null || !Number.isFinite(c)) continue;
+        const date = new Date(result.timestamp[i]! * 1000)
+          .toISOString()
+          .slice(0, 10);
+        history.push({ date, close: Number(c) });
+      }
+      if (history.length < 5) {
+        throw new Error("Yahoo chart: serie corta");
+      }
+      const live =
+        typeof result.meta?.regularMarketPrice === "number"
+          ? result.meta.regularMarketPrice
+          : null;
+      return {
+        history,
+        currency: result.meta?.currency || "USD",
+        livePrice: live,
+      };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr ?? new Error("Yahoo chart falló");
+}
+
+async function fetchBarsViaSdk(symbol: string): Promise<DailyBar[]> {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - 60);
 
-  // Prefer chart() (API actual de Yahoo); fallback a historical()
   try {
     const chart = await yahooFinance.chart(symbol, {
       period1: start,
@@ -136,16 +248,49 @@ export async function fetchPriceAnalysis(ticker: string): Promise<PriceAnalysis>
   const symbol = ticker.trim().toUpperCase();
 
   try {
-    const history = await fetchDailyBars(symbol);
+    // 1) Direct chart API with retry/backoff (harden 429)
+    const viaApi = await withRetry(() => fetchBarsViaChartApi(symbol), 4, 800);
+    const history = viaApi.history;
+    const closes = history.map((h) => h.close);
+    const last = closes[closes.length - 1]!;
+    const prev = closes[closes.length - 2] ?? null;
+    const livePrice = viaApi.livePrice ?? last;
+
+    return {
+      snapshot: {
+        ticker: symbol,
+        currency: viaApi.currency,
+        price: livePrice,
+        previousClose: prev,
+        changePct:
+          prev != null
+            ? Number((((livePrice - prev) / prev) * 100).toFixed(2))
+            : null,
+        asOf: new Date().toISOString(),
+        source: "yahoo",
+      },
+      streak7: computeStreak(closes, 7),
+      streak30: computeStreak(closes, 30),
+      history,
+    };
+  } catch (apiErr) {
+    console.warn("[price] Yahoo chart API falló, intentando SDK:", apiErr);
+  }
+
+  try {
+    const history = await withRetry(() => fetchBarsViaSdk(symbol), 3, 900);
     if (history.length < 5) {
       return demoPriceAnalysis(symbol);
     }
-
     const closes = history.map((h) => h.close);
     const last = closes[closes.length - 1]!;
     const prev = closes[closes.length - 2] ?? null;
 
-    const quote = await yahooFinance.quote(symbol).catch(() => null);
+    const quote = await withRetry(
+      () => yahooFinance.quote(symbol),
+      2,
+      500
+    ).catch(() => null);
     const livePrice =
       typeof quote?.regularMarketPrice === "number"
         ? quote.regularMarketPrice
@@ -170,7 +315,8 @@ export async function fetchPriceAnalysis(ticker: string): Promise<PriceAnalysis>
       streak30: computeStreak(closes, 30),
       history,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[price] Yahoo falló por completo, usando demo:", err);
     return demoPriceAnalysis(symbol);
   }
 }

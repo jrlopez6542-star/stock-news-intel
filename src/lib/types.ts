@@ -1,4 +1,4 @@
-/** Tipos compartidos del MVP de inteligencia de noticias bursátiles (es-CO). */
+/** Tipos compartidos — inteligencia de noticias bursátiles (es-CO). */
 
 export type Ticker = string;
 
@@ -11,6 +11,10 @@ export type RecommendationAction =
   | "mantener"
   | "reducir"
   | "retirar";
+
+export type PriceSource = "yahoo" | "demo";
+
+export type NewsProviderName = "benzinga" | "yahoo" | "demo";
 
 export interface CompanyProfile {
   ticker: string;
@@ -37,7 +41,7 @@ export interface PriceSnapshot {
   previousClose: number | null;
   changePct: number | null;
   asOf: string;
-  source: "yahoo" | "demo";
+  source: PriceSource;
 }
 
 export interface StreakResult {
@@ -93,7 +97,8 @@ export interface AnalyzeResponse {
   news: ScoredNewsItem[];
   recommendation: Recommendation;
   meta: {
-    newsProvider: "benzinga" | "demo";
+    newsProvider: NewsProviderName;
+    priceSource: PriceSource;
     scorer: "openai" | "heuristic";
     recommender: "openai" | "heuristic";
     generatedAt: string;

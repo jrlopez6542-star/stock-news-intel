@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 
 /**
  * Estado de proveedores configurados (sin filtrar secrets).
- * Útil para ver en UI o curl si hay keys sin abrir .env.local.
  */
 export async function GET() {
   const openaiConfigured = hasOpenAIKey();
@@ -22,14 +21,15 @@ export async function GET() {
       price: {
         active: "yahoo",
         fallback: "demo",
-        note: "Yahoo Finance gratis, sin key",
+        note: "Yahoo Finance (chart API + retry/backoff). Demo solo si Yahoo falla.",
       },
       news: {
-        active: benzingaConfigured ? "benzinga" : "mock",
-        configured: benzingaConfigured,
+        active: benzingaConfigured ? "benzinga" : "yahoo",
+        configured: true,
+        preferred: benzingaConfigured ? "benzinga" : "yahoo",
         note: benzingaConfigured
-          ? "Benzinga Basic (headline/teaser)"
-          : "Mock demo — pega BENZINGA_API_KEY en .env.local",
+          ? "Benzinga preferido; Yahoo RSS/search como respaldo gratis"
+          : "Yahoo Finance RSS/search (gratis, sin key). Mock solo si falla.",
       },
       scoring: {
         active: openaiConfigured ? "openai" : "heuristic",
@@ -37,7 +37,7 @@ export async function GET() {
         model: openaiConfigured ? getOpenAIModel() : null,
         note: openaiConfigured
           ? `OpenAI (${getOpenAIModel()})`
-          : "Heurística demo — pega OPENAI_API_KEY en .env.local",
+          : "Heurística — pega OPENAI_API_KEY en .env.local para IA",
       },
       recommendation: {
         active: openaiConfigured ? "openai" : "heuristic",

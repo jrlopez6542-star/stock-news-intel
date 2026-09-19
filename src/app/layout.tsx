@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stock News Intel · es-CO",
+  title: "Stock News Intel · Trading desk",
   description:
-    "Inteligencia de noticias bursátiles: precio, rachas, score de impacto y recomendación en español.",
+    "Escritorio de inteligencia bursátil: precio Yahoo, rachas, noticias con score y recomendación en español (es-CO).",
 };
 
 export default function RootLayout({
