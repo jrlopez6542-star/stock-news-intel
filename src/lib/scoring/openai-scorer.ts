@@ -15,6 +15,8 @@ interface LlmScoreRow {
   direction: PriceDirection;
   scope: NewsScope;
   explanation: string;
+  titleEs?: string;
+  summaryEs?: string;
 }
 
 function buildPrompt(profile: CompanyProfile, items: RawNewsItem[]): string {
@@ -33,7 +35,7 @@ Contexto de la empresa:
 También puntúa noticias MACRO/sectoriales (Fed, aranceles, guerras, shocks de sector) aunque no nombren a la empresa, si pueden mover el precio.
 
 Para cada noticia devuelve JSON array con:
-{ "id", "score" (1-10 entero), "direction" ("up"|"down"|"neutral"), "scope" ("company"|"macro"), "explanation" (1-2 frases en español) }
+{ "id", "score" (1-10 entero), "direction" ("up"|"down"|"neutral"), "scope" ("company"|"macro"), "explanation" (1-2 frases en español), "titleEs" (título en español; si ya está en español, copia el original), "summaryEs" (resumen breve en español; no inventes hechos) }
 
 Descarta mentalmente irrelevantes (score bajo). Noticias:
 ${JSON.stringify(
@@ -43,6 +45,7 @@ ${JSON.stringify(
     summary: i.summary,
     tickers: i.tickers,
     isMacroHint: i.isMacroHint ?? false,
+    languageHint: i.languageHint ?? "unknown",
   })),
   null,
   2
@@ -66,7 +69,7 @@ export async function scoreNewsWithOpenAI(
         {
           role: "system",
           content:
-            'Responde con un objeto JSON {"items":[...]} donde items es el array de scores.',
+            'Responde con un objeto JSON {"items":[...]} donde items es el array de scores. Explicaciones, titleEs y summaryEs en español (es-CO). No inventes noticias.',
         },
         { role: "user", content: buildPrompt(profile, items) },
       ],
@@ -88,10 +91,16 @@ export async function scoreNewsWithOpenAI(
       if (!row) continue;
       const score = Math.max(1, Math.min(10, Math.round(Number(row.score) || 1)));
       if (score < 5) continue;
+      const titleEs = row.titleEs?.trim();
+      const summaryEs = row.summaryEs?.trim();
+      const translated = Boolean(
+        (titleEs && titleEs !== item.title) ||
+          (summaryEs && summaryEs !== item.summary)
+      );
       scored.push({
         id: item.id,
-        title: item.title,
-        summary: item.summary,
+        title: titleEs || item.title,
+        summary: summaryEs || item.summary,
         url: item.url,
         publishedAt: item.publishedAt,
         source: item.source,
@@ -102,6 +111,8 @@ export async function scoreNewsWithOpenAI(
             ? row.direction
             : "neutral",
         explanation: row.explanation || "Sin explicación.",
+        language: "es",
+        translated,
       });
     }
 

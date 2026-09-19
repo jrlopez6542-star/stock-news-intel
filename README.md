@@ -1,6 +1,6 @@
 # Stock News Intel (es-CO)
 
-Dashboard tipo trading desk: consulta un ticker (p. ej. `AAPL`), ves **precio** (Yahoo Finance), **gráfico de cierres 7/30d**, **rachas**, **noticias reales puntuadas 1–10** (empresa + macro) y una **recomendación**: invertir / mantener / reducir / retirar.
+Dashboard tipo trading desk: **tablero Comprar / Vender**, precio (Yahoo Finance), rachas 7/30, **noticias en español** (preferencia ES + traducción OpenAI) con score 1–10 y recomendación (invertir → comprar · retirar/reducir → vender · mantener).
 
 ## Cómo correr
 
@@ -26,15 +26,21 @@ Sin `OPENAI_API_KEY` ni `BENZINGA_API_KEY` la app sigue usando datos reales cuan
 | Pipeline | Preferido | Fallback |
 |----------|-----------|----------|
 | **Precio** | Yahoo Finance (chart API + retry/backoff ante 429) | Serie **demo** etiquetada en UI |
-| **Noticias** | Yahoo Finance RSS / search (gratis) | **Mock** etiquetado solo si Yahoo falla |
-| **Score / reco** | Heurística | — |
+| **Noticias** | Yahoo Finance RSS ES → EN / search (gratis) | **Mock** etiquetado solo si Yahoo falla |
+| **Score / reco** | Heurística (explicaciones en ES; títulos pueden quedar EN) | — |
 
 Con keys:
 
 - `BENZINGA_API_KEY` → Benzinga preferido; Yahoo como respaldo.
-- `OPENAI_API_KEY` → scoring + recomendación con `gpt-4o-mini` (override con `OPENAI_MODEL`).
+- `OPENAI_API_KEY` → scoring + recomendación + **traducción de titulares/resúmenes al español** (`gpt-4o-mini`, override con `OPENAI_MODEL`).
 
-Badges de proveedores en la UI y `GET /api/health`. Cada análisis expone `meta.priceSource` y `meta.newsProvider`.
+## Tablero Comprar / Vender
+
+Watchlist líquida por defecto: `AAPL, NVDA, TSLA, MSFT, AMZN, GOOGL, META, AMD` (+ ticker actual si no está).
+
+- Columnas: **Comprar** · **Vender** (retirar/reducir) · **Mantener**
+- Carga progresiva con concurrencia 3 y barra de progreso
+- API batch: `GET /api/board` (caché breve ~90s) o por ticker `GET /api/analyze?ticker=AAPL`
 
 ## Conectar keys (barato)
 
@@ -42,7 +48,7 @@ Badges de proveedores en la UI y `GET /api/health`. Cada análisis expone `meta.
 cp .env.example .env.local
 ```
 
-### 1) OpenAI (scoring + recomendación)
+### 1) OpenAI (scoring + recomendación + ES)
 
 ```env
 OPENAI_API_KEY=sk-...
@@ -60,14 +66,15 @@ Compatible con Basic free (`displayOutput=headline`). **Nunca subas `.env.local`
 ## Arquitectura
 
 ```
-Ticker
+Ticker / Watchlist
   ├─ price-service     → Yahoo chart (+ SDK) con retry → demo
-  ├─ news/provider     → Benzinga → Yahoo RSS/search → mock
-  ├─ news-scorer       → OpenAI o heurística (filtra score < 5)
-  └─ recommender       → OpenAI o heurística (acción + confianza)
+  ├─ news/provider     → Benzinga → Yahoo RSS ES/EN → mock
+  ├─ news-scorer       → OpenAI (score + titleEs/summaryEs) o heurística
+  ├─ translate-es      → lote EN→ES si hace falta (solo con OpenAI)
+  └─ recommender       → OpenAI o heurística → mapa comprar/vender/mantener
 ```
 
-APIs: `GET /api/analyze?ticker=AAPL` · `GET /api/health`
+APIs: `GET /api/analyze?ticker=AAPL` · `GET /api/board` · `GET /api/health`
 
 ## Nota
 

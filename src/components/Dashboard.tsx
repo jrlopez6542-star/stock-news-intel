@@ -5,6 +5,7 @@ import type { AnalyzeResponse } from "@/lib/types";
 import { NewsList } from "./NewsList";
 import { PricePanel } from "./PricePanel";
 import { RecommendationPanel } from "./RecommendationPanel";
+import { RecommendationsBoard } from "./RecommendationsBoard";
 import { ProviderStatus } from "./ProviderStatus";
 import { TickerSearch } from "./TickerSearch";
 
@@ -87,15 +88,21 @@ export function Dashboard() {
               Inteligencia de noticias bursátiles
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400 sm:text-base">
-              Escritorio de análisis: precio en vivo, rachas de 7/30 sesiones,
-              titulares con score de impacto (empresa vs macro) y recomendación
-              estructurada (invertir / mantener / reducir / retirar).
+              Escritorio de análisis: tablero Comprar / Vender, precio en vivo,
+              rachas 7/30, titulares en español con score de impacto y
+              recomendación (invertir → comprar · retirar/reducir → vender ·
+              mantener).
             </p>
           </div>
           <TickerSearch initial={ticker} onSearch={load} loading={loading} />
           <ProviderStatus />
         </div>
       </header>
+
+      <RecommendationsBoard
+        currentTicker={ticker}
+        onSelectTicker={(t) => void load(t)}
+      />
 
       {error && (
         <div
@@ -167,7 +174,8 @@ export function Dashboard() {
                       Noticias filtradas
                     </h2>
                     <p className="text-sm text-slate-400">
-                      Paso 1 · Solo score ≥ 5 · empresa y macro
+                      Paso 1 · Score ≥ 5 · títulos/resúmenes en español cuando
+                      hay OpenAI
                     </p>
                   </div>
                   <span className="rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-xs text-slate-400">

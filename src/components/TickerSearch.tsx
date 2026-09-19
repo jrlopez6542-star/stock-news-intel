@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-const SUGGESTIONS = ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL", "AMZN"];
+const SUGGESTIONS = ["AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "AMD"];
 
 interface Props {
   initial?: string;

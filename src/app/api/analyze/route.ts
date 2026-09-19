@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCompanyProfile } from "@/lib/company-context";
-import { fetchNews } from "@/lib/news/provider";
-import { fetchPriceAnalysis } from "@/lib/price/price-service";
-import { buildRecommendation } from "@/lib/recommendation/recommender";
-import { scoreNews } from "@/lib/scoring/news-scorer";
-import type { AnalyzeResponse } from "@/lib/types";
+import { analyzeTicker } from "@/lib/analyze-ticker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,34 +21,7 @@ export async function GET(req: NextRequest) {
   const ticker = tickerParam.toUpperCase();
 
   try {
-    const profile = getCompanyProfile(ticker);
-    const [price, newsResult] = await Promise.all([
-      fetchPriceAnalysis(ticker),
-      fetchNews(ticker),
-    ]);
-
-    const { news, scorer } = await scoreNews(newsResult.items, profile);
-    const { recommendation, recommender } = await buildRecommendation(
-      news,
-      price,
-      profile
-    );
-
-    const body: AnalyzeResponse = {
-      ticker,
-      company: profile,
-      price,
-      news,
-      recommendation,
-      meta: {
-        newsProvider: newsResult.provider,
-        priceSource: price.snapshot.source,
-        scorer,
-        recommender,
-        generatedAt: new Date().toISOString(),
-      },
-    };
-
+    const body = await analyzeTicker(ticker);
     return NextResponse.json(body);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error desconocido";

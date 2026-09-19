@@ -45,45 +45,61 @@ function toIso(value: unknown): string {
   return new Date().toISOString();
 }
 
-/** Yahoo Finance headline RSS — gratis, sin API key. */
-async function fetchYahooRss(symbol: string): Promise<RawNewsItem[]> {
-  const url = `https://finance.yahoo.com/rss/headline?s=${encodeURIComponent(symbol)}`;
+/** Yahoo Finance headline RSS — gratis, sin API key. Prefiere es.finance si hay ítems. */
+async function fetchYahooRssFrom(
+  host: string,
+  symbol: string,
+  languageHint: "es" | "en"
+): Promise<RawNewsItem[]> {
+  const url = `https://${host}/rss/headline?s=${encodeURIComponent(symbol)}`;
   const res = await fetch(url, {
     headers: {
       Accept: "application/rss+xml, application/xml, text/xml, */*",
       "User-Agent": UA,
+      "Accept-Language": languageHint === "es" ? "es-CO,es;q=0.9" : "en-US,en;q=0.8",
     },
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error(`Yahoo RSS HTTP ${res.status}`);
+    throw new Error(`Yahoo RSS (${host}) HTTP ${res.status}`);
   }
   const xml = await res.text();
   const blocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(
     (m) => m[1]!
   );
   if (blocks.length === 0) {
-    throw new Error("Yahoo RSS: sin ítems");
+    throw new Error(`Yahoo RSS (${host}): sin ítems`);
   }
 
   return blocks.slice(0, 20).map((block, idx) => {
     const title = tagFromRss(block, "title") || "(sin título)";
     const link =
       tagFromRss(block, "link") ||
-      `https://finance.yahoo.com/quote/${symbol}`;
+      `https://${host}/quote/${symbol}`;
     const description = tagFromRss(block, "description") || title;
     const pubDate = tagFromRss(block, "pubDate");
-    const guid = tagFromRss(block, "guid") || `yahoo-rss-${symbol}-${idx}`;
+    const guid = tagFromRss(block, "guid") || `yahoo-rss-${languageHint}-${symbol}-${idx}`;
     return {
       id: String(guid).slice(0, 120),
       title,
       summary: description.slice(0, 600),
       url: link,
       publishedAt: toIso(pubDate),
-      source: "Yahoo Finance",
+      source: languageHint === "es" ? "Yahoo Finance (ES)" : "Yahoo Finance",
       tickers: [symbol],
+      languageHint,
     } satisfies RawNewsItem;
   });
+}
+
+async function fetchYahooRss(symbol: string): Promise<RawNewsItem[]> {
+  try {
+    const esItems = await fetchYahooRssFrom("es.finance.yahoo.com", symbol, "es");
+    if (esItems.length > 0) return esItems;
+  } catch (err) {
+    console.warn("[news] Yahoo RSS ES falló, probando EN:", err);
+  }
+  return fetchYahooRssFrom("finance.yahoo.com", symbol, "en");
 }
 
 /** yahoo-finance2 search news — gratis, sin key. */

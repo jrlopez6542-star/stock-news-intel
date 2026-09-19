@@ -48,6 +48,16 @@ export function NewsCard({ item }: { item: ScoredNewsItem }) {
           >
             {dir.label}
           </span>
+          {item.translated && (
+            <span className="rounded-lg border border-teal-500/40 bg-teal-500/10 px-2 py-1 text-[11px] font-semibold text-teal-300">
+              Traducido ES
+            </span>
+          )}
+          {!item.translated && item.language === "en" && (
+            <span className="rounded-lg border border-slate-600 bg-slate-800/60 px-2 py-1 text-[11px] font-semibold text-slate-400">
+              EN
+            </span>
+          )}
         </div>
         <time className="shrink-0 text-xs text-slate-500">
           {new Date(item.publishedAt).toLocaleDateString("es-CO", {

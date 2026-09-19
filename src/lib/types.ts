@@ -68,6 +68,8 @@ export interface RawNewsItem {
   tickers: string[];
   /** Si el proveedor marca la noticia como macro/sectorial. */
   isMacroHint?: boolean;
+  /** Idioma detectado o preferido del proveedor. */
+  languageHint?: "es" | "en" | "unknown";
 }
 
 export interface ScoredNewsItem {
@@ -81,6 +83,10 @@ export interface ScoredNewsItem {
   score: number; // 1–10
   direction: PriceDirection;
   explanation: string;
+  /** Idioma del título/resumen mostrados. */
+  language?: "es" | "en";
+  /** true si título/resumen fueron traducidos al español. */
+  translated?: boolean;
 }
 
 export interface Recommendation {
@@ -101,6 +107,30 @@ export interface AnalyzeResponse {
     priceSource: PriceSource;
     scorer: "openai" | "heuristic";
     recommender: "openai" | "heuristic";
+    generatedAt: string;
+  };
+}
+
+export interface BoardCard {
+  ticker: string;
+  companyName: string;
+  boardColumn: "comprar" | "vender" | "reducir" | "mantener";
+  boardLabel: string;
+  sourceAction: RecommendationAction;
+  rationale: string;
+  confidence: number;
+  price: PriceSnapshot;
+  factors: string[];
+  meta: AnalyzeResponse["meta"];
+}
+
+export interface BoardResponse {
+  tickers: string[];
+  cards: BoardCard[];
+  errors: { ticker: string; error: string }[];
+  meta: {
+    cached: boolean;
+    concurrency: number;
     generatedAt: string;
   };
 }
