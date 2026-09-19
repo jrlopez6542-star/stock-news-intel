@@ -114,64 +114,85 @@ function BoardCardView({
       : change >= 0
         ? "text-emerald-400"
         : "text-rose-400";
+  const yahooUrl = `https://finance.yahoo.com/quote/${encodeURIComponent(card.ticker)}`;
+
+  function selectTicker() {
+    onSelect?.(card.ticker);
+  }
 
   return (
     <article
-      className={`rounded-xl border bg-slate-950/50 p-3.5 shadow-sm shadow-black/20 transition hover:border-slate-600 ${
+      className={`group rounded-xl border bg-slate-950/50 p-3.5 shadow-sm shadow-black/20 transition ${
         highlight
           ? "border-emerald-500/50 ring-1 ring-emerald-500/30"
-          : "border-slate-800/80"
+          : "border-slate-800/80 hover:border-slate-600"
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <button
-            type="button"
-            onClick={() => onSelect?.(card.ticker)}
-            className="text-left text-lg font-bold tracking-wide text-white hover:text-emerald-300"
+      <button
+        type="button"
+        onClick={selectTicker}
+        aria-label={`Analizar ${card.ticker} en el escritorio`}
+        className="w-full cursor-pointer rounded-lg text-left outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <span className="text-lg font-bold tracking-wide text-white group-hover:text-emerald-300">
+              {card.ticker}
+            </span>
+            <p className="text-xs text-slate-500 line-clamp-1">{card.companyName}</p>
+          </div>
+          <span
+            className={`rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              card.boardColumn === "comprar"
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                : card.boardColumn === "mantener"
+                  ? "border-sky-500/40 bg-sky-500/15 text-sky-300"
+                  : isReduce
+                    ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                    : "border-rose-500/40 bg-rose-500/15 text-rose-300"
+            }`}
           >
-            {card.ticker}
-          </button>
-          <p className="text-xs text-slate-500 line-clamp-1">{card.companyName}</p>
+            {card.boardLabel}
+          </span>
         </div>
-        <span
-          className={`rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-            card.boardColumn === "comprar"
-              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-              : card.boardColumn === "mantener"
-                ? "border-sky-500/40 bg-sky-500/15 text-sky-300"
-                : isReduce
-                  ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                  : "border-rose-500/40 bg-rose-500/15 text-rose-300"
-          }`}
-        >
-          {card.boardLabel}
-        </span>
-      </div>
-      <p className={`mt-2 text-sm font-medium tabular-nums ${changeColor}`}>
-        {formatPrice(card)}
-      </p>
-      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Confianza</span>
-        <span className="font-semibold tabular-nums text-slate-200">{pct}%</span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
-        <div
-          className={`h-full rounded-full ${
-            card.boardColumn === "comprar"
-              ? "bg-emerald-400"
-              : card.boardColumn === "mantener"
-                ? "bg-sky-400"
-                : isReduce
-                  ? "bg-amber-400"
-                  : "bg-rose-400"
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="mt-2.5 text-xs leading-relaxed text-slate-400 line-clamp-3">
-        {card.rationale}
-      </p>
+        <p className={`mt-2 text-sm font-medium tabular-nums ${changeColor}`}>
+          {formatPrice(card)}
+        </p>
+        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+          <span>Confianza</span>
+          <span className="font-semibold tabular-nums text-slate-200">{pct}%</span>
+        </div>
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className={`h-full rounded-full ${
+              card.boardColumn === "comprar"
+                ? "bg-emerald-400"
+                : card.boardColumn === "mantener"
+                  ? "bg-sky-400"
+                  : isReduce
+                    ? "bg-amber-400"
+                    : "bg-rose-400"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="mt-2.5 text-xs leading-relaxed text-slate-400 line-clamp-3">
+          {card.rationale}
+        </p>
+        <p className="mt-2 text-[11px] font-medium text-emerald-400/80 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+          Clic para analizar en el escritorio →
+        </p>
+      </button>
+      <a
+        href={yahooUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[11px] font-medium text-sky-300 transition hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
+      >
+        <span aria-hidden>↗</span>
+        Ver en Yahoo Finance
+      </a>
     </article>
   );
 }

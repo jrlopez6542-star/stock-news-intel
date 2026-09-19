@@ -49,6 +49,14 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const positionRef = useRef<PositionContext>({});
+  const analysisRef = useRef<HTMLDivElement>(null);
+
+  const scrollToAnalysis = useCallback(() => {
+    // Defer so layout paints after ticker/state updates
+    requestAnimationFrame(() => {
+      analysisRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   const load = useCallback(async (t: string, position?: PositionContext) => {
     setTicker(t);
@@ -74,6 +82,14 @@ export function Dashboard() {
       setLoading(false);
     }
   }, []);
+
+  const selectFromBoard = useCallback(
+    (t: string) => {
+      void load(t);
+      scrollToAnalysis();
+    },
+    [load, scrollToAnalysis]
+  );
 
   useEffect(() => {
     void load("AAPL");
@@ -122,9 +138,15 @@ export function Dashboard() {
 
       <RecommendationsBoard
         currentTicker={ticker}
-        onSelectTicker={(t) => void load(t)}
+        onSelectTicker={selectFromBoard}
       />
 
+      <div
+        id="analisis"
+        ref={analysisRef}
+        className="scroll-mt-6 space-y-6"
+        aria-label="Análisis del ticker"
+      >
       {error && (
         <div
           role="alert"
@@ -279,6 +301,7 @@ export function Dashboard() {
           Ingresa un ticker para comenzar el análisis.
         </div>
       )}
+      </div>
 
       <footer className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-4 py-3 text-center text-[11px] text-slate-500">
         Contenido educativo. No constituye asesoría financiera, recomendación de
